@@ -1,0 +1,17 @@
+{
+  "name": "llms-docs-indexer",
+  "version": "0.0.0",
+  "description": "Build a compact AI-readable docs index with scope, freshness and source links.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/edilec/llms-docs-indexer"
+  }
+}
