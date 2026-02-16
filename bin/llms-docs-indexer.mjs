@@ -49,9 +49,7 @@ if (argv.length === 1 && argv[0] === '--help') {
     const manifest = await json(manifestName, LIMITS.manifestBytes);
     result = await buildIndex(manifest, policy, async name => {
       const { bytes, file } = await confined(name, LIMITS.sourceBytes);
-      const decoded = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-      if (decoded.includes('\u0000')) throw new Error('not text');
-      return { bytes, identity: file };
+      return { bytes, identity: file, linkVerified: true };
     });
   } catch {
     result = incomplete('manifest-unreadable', 'Manifest could not be read, decoded, or parsed within the declared root.');

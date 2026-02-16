@@ -43,24 +43,26 @@ export async function buildIndex(manifest, rawPolicy, loadSource, { now = () => 
     if (now() - started > LIMITS.milliseconds) return incomplete('time-limit', 'Indexing exceeded 5000 milliseconds.');
     if (!record(source) || !exactKeys(source, ['path', 'purpose', 'owner', 'scope', 'dataClass', 'reviewedOn']) || !path(source.path) || !text(source.purpose) || !text(source.owner) || !text(source.scope) || !day(source.reviewedOn)) { add(findings, 'source-invalid', pointer, 'Source metadata is unusable.'); continue; }
     if (!['public', 'internal', 'restricted'].includes(source.dataClass)) { add(findings, 'source-unknown', `${pointer}/dataClass`, 'Source permission class is unknown.'); continue; }
+    const allowed = source.dataClass === 'public' || (policy.audience === 'internal' && source.dataClass === 'internal');
+    if (!allowed) { excluded++; continue; }
     const ageDays = (Date.parse(`${policy.asOf}T00:00:00Z`) - Date.parse(`${source.reviewedOn}T00:00:00Z`)) / 86_400_000;
     if (ageDays < 0) { add(findings, 'source-future', `${pointer}/reviewedOn`, 'Review date is after the declared as-of date.'); continue; }
+    const stale = ageDays > policy.maxAgeDays;
+    if (stale) add(findings, 'stale-source', `${pointer}/reviewedOn`, 'Source review age exceeds the policy limit.');
+    if (stale && policy.stale === 'exclude') { excluded++; continue; }
     let loaded;
     try { loaded = await loadSource(source.path); } catch (error) { add(findings, error?.message === 'byte-limit' ? 'source-byte-limit' : 'source-unreadable', pointer, error?.message === 'byte-limit' ? 'Source exceeds 262144 bytes.' : 'Source could not be read within the declared root.'); continue; }
-    const bytes = loaded instanceof Uint8Array ? loaded : loaded?.bytes;
-    const identity = loaded instanceof Uint8Array ? source.path : loaded?.identity;
-    if (!(bytes instanceof Uint8Array) || typeof identity !== 'string' || !identity) { add(findings, 'source-unreadable', pointer, 'Source could not be read within the declared root.'); continue; }
+    const bytes = loaded?.bytes;
+    const identity = loaded?.identity;
+    if (!(bytes instanceof Uint8Array) || typeof identity !== 'string' || !identity || loaded?.linkVerified !== true) { add(findings, 'source-unreadable', pointer, 'Source link was not verified within the declared root.'); continue; }
     checked++;
     if (bytes.length > LIMITS.sourceBytes) { add(findings, 'source-byte-limit', pointer, 'Source exceeds 262144 bytes.'); continue; }
+    try { if (new TextDecoder('utf-8', { fatal: true }).decode(bytes).includes('\u0000')) throw new Error('NUL'); }
+    catch { add(findings, 'source-unreadable', pointer, 'Source is not usable UTF-8 text.'); continue; }
     totalBytes += bytes.length;
     if (totalBytes > LIMITS.totalBytes) return incomplete('total-byte-limit', 'Source data exceeds 4194304 total bytes.');
     if (seen.has(identity)) { add(findings, 'source-duplicate', pointer, 'Source resolves to a duplicate document.'); continue; }
     seen.add(identity);
-    const allowed = source.dataClass === 'public' || (policy.audience === 'internal' && source.dataClass === 'internal');
-    if (!allowed) { excluded++; continue; }
-    const stale = ageDays > policy.maxAgeDays;
-    if (stale) add(findings, 'stale-source', `${pointer}/reviewedOn`, 'Source review age exceeds the policy limit.');
-    if (stale && policy.stale === 'exclude') { excluded++; continue; }
     index.push({ link: source.path, purpose: source.purpose, owner: source.owner, scope: source.scope, dataClass: source.dataClass, reviewedOn: source.reviewedOn, freshness: stale ? 'stale' : 'current', sha256: createHash('sha256').update(bytes).digest('hex') });
   }
   if (now() - started > LIMITS.milliseconds) return incomplete('time-limit', 'Indexing exceeded 5000 milliseconds.');

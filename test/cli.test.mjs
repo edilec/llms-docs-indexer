@@ -41,6 +41,23 @@ test('missing documentation remains incomplete and never emits a dead link', asy
     assert.equal(r.status, 'incomplete'); assert.deepEqual(r.index, []);
   }, { ...manifest, sources: [{ ...manifest.sources[0], path: 'docs/missing.md' }] });
 });
+
+test('public index excludes missing private source without opening it', async () => {
+  const sources = [...manifest.sources, { ...manifest.sources[0], path: 'secrets/missing.md', dataClass: 'restricted', reviewedOn: '2026-02-01' }];
+  await fixture(async root => {
+    const p = run(root); assert.equal(p.status, 0); const r = JSON.parse(p.stdout);
+    assert.equal(r.status, 'pass'); assert.equal(r.summary.excluded, 1);
+    assert.equal(p.stdout.includes('secrets/missing.md'), false);
+  }, { ...manifest, sources });
+});
+
+test('stale excluded source fails without needing its missing content', async () => {
+  await fixture(async root => {
+    const p = run(root); assert.equal(p.status, 1); const r = JSON.parse(p.stdout);
+    assert.equal(r.status, 'fail'); assert.equal(r.findings[0].ruleId, 'stale-source');
+    assert.deepEqual(r.index, []);
+  }, { ...manifest, sources: [{ ...manifest.sources[0], path: 'docs/missing.md', reviewedOn: '2025-12-31' }] });
+});
 test('source symlink outside the declared root is refused', async () => {
   const outside = await mkdtemp(join(tmpdir(), 'docs-index-out-'));
   try {

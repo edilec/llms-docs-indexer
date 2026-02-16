@@ -1,6 +1,6 @@
 # Local Docs Indexer
 
-`TOOL_ID=llms-docs-indexer`. Build a compact, deterministic JSON index of local documentation exports. Each entry contains only declared purpose, owner and scope, an explicit review date and freshness state, a SHA-256 content hash, and a local link proven to resolve inside the supplied root. The tool never invents a capability from document prose, claims its own authority, fetches a URL, or writes to a source system. It has no dependencies.
+`TOOL_ID=llms-docs-indexer`. Build a compact, deterministic JSON index of local documentation exports. Each entry contains only declared purpose, owner and scope, an explicit review date and freshness state, a SHA-256 content hash, and a local link that the CLI verifies inside the supplied root. The tool never invents a capability from document prose, claims its own authority, fetches a URL, or writes to a source system. It has no dependencies.
 
 ## Run
 
@@ -18,7 +18,9 @@ The manifest is `{ "schemaVersion":"1", "complete":true, "sources":[...] }`. `co
 
 The separate policy is `{ "schemaVersion":"1", "audience":"public", "asOf":"2026-01-31", "maxAgeDays":30, "stale":"exclude" }`. Audience is `public` or `internal`. A public index can emit only public sources; an internal index can emit public and internal sources; restricted sources are always omitted. Omitted private sources are counted without publishing their paths or hashes. `maxAgeDays` is a whole number from 0 through 3650. A source at exactly the age limit is current; one day older is stale. `stale` may be `exclude` or `include-flagged`: both raise a failing `stale-source` finding, while the latter emits a visibly `stale` entry. Future review dates are incomplete evidence. The as-of date is supplied, never read from the host clock.
 
-The JSON report has `schemaVersion`, `tool`, `status`, `summary`, `findings`, and `index`. Index rows are sorted by UTF-16 path order. A row has `link`, `purpose`, `owner`, `scope`, `dataClass`, `reviewedOn`, `freshness`, and `sha256`. Hashes are computed only for permitted emitted sources; omitted private paths and hashes never appear. Findings use the logical `@manifest` source role and a pointer to the source ordinal, never a host path, payload, or parser excerpt. The output is an index of supplied claims, not an endorsement that a document is accurate or that a corpus truly is complete. Treat internal-audience reports as internal data.
+The JSON report has `schemaVersion`, `tool`, `status`, `summary`, `findings`, and `index`. Index rows are sorted by UTF-16 path order. A row has `link`, `purpose`, `owner`, `scope`, `dataClass`, `reviewedOn`, `freshness`, and `sha256`. The CLI resolves every emitted link, then hashes its verified UTF-8 content. Excluded private or stale sources are not opened; omitted private paths and hashes never appear. Findings use the logical `@manifest` source role and a pointer to the source ordinal, never a host path, payload, or parser excerpt. The output is an index of supplied claims, not an endorsement that a document is accurate or that a corpus truly is complete. Treat internal-audience reports as internal data.
+
+Direct library callers may use `buildIndex(manifest, policy, loadSource, { now })` with a trusted source adapter. The adapter must return `{ bytes, identity, linkVerified: true }` only after independently resolving the named link inside its root; bare byte arrays or an unverified link make the result incomplete. The library checks text bytes and bounds itself but cannot prove a caller's attestation about a filesystem it was not given. For filesystem provenance, use the CLI.
 
 | Rule | Outcome | Meaning |
 | --- | --- | --- |
