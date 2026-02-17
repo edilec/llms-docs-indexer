@@ -36,6 +36,13 @@ test('excluded private source is never opened or checked for freshness', async (
   assert.equal(opened, false); assert.deepEqual(r.index, []);
 });
 
+test('an all-private manifest records evaluated exclusions without claiming public content', async () => {
+  const r = await buildIndex(manifest(source('private.md', 'restricted')), policy, async () => { throw Error('must not open'); });
+  assert.equal(r.status, 'pass'); assert.equal(r.summary.checked, 1);
+  assert.equal(r.summary.included, 0); assert.equal(r.summary.excluded, 1);
+  assert.deepEqual(r.index, []);
+});
+
 test('stale source is not silently presented as current', async () => {
   const r = await buildIndex(manifest(source('docs/old.md', 'public', '2025-12-31')), policy, load);
   assert.equal(r.status, 'fail');

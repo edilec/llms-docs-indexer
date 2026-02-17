@@ -43,6 +43,7 @@ export async function buildIndex(manifest, rawPolicy, loadSource, { now = () => 
     if (now() - started > LIMITS.milliseconds) return incomplete('time-limit', 'Indexing exceeded 5000 milliseconds.');
     if (!record(source) || !exactKeys(source, ['path', 'purpose', 'owner', 'scope', 'dataClass', 'reviewedOn']) || !path(source.path) || !text(source.purpose) || !text(source.owner) || !text(source.scope) || !day(source.reviewedOn)) { add(findings, 'source-invalid', pointer, 'Source metadata is unusable.'); continue; }
     if (!['public', 'internal', 'restricted'].includes(source.dataClass)) { add(findings, 'source-unknown', `${pointer}/dataClass`, 'Source permission class is unknown.'); continue; }
+    checked++;
     const allowed = source.dataClass === 'public' || (policy.audience === 'internal' && source.dataClass === 'internal');
     if (!allowed) { excluded++; continue; }
     const ageDays = (Date.parse(`${policy.asOf}T00:00:00Z`) - Date.parse(`${source.reviewedOn}T00:00:00Z`)) / 86_400_000;
@@ -55,7 +56,6 @@ export async function buildIndex(manifest, rawPolicy, loadSource, { now = () => 
     const bytes = loaded?.bytes;
     const identity = loaded?.identity;
     if (!(bytes instanceof Uint8Array) || typeof identity !== 'string' || !identity || loaded?.linkVerified !== true) { add(findings, 'source-unreadable', pointer, 'Source link was not verified within the declared root.'); continue; }
-    checked++;
     if (bytes.length > LIMITS.sourceBytes) { add(findings, 'source-byte-limit', pointer, 'Source exceeds 262144 bytes.'); continue; }
     try { if (new TextDecoder('utf-8', { fatal: true }).decode(bytes).includes('\u0000')) throw new Error('NUL'); }
     catch { add(findings, 'source-unreadable', pointer, 'Source is not usable UTF-8 text.'); continue; }
