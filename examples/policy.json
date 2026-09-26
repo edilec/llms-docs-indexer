@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "1",
+  "audience": "public",
+  "asOf": "2026-01-31",
+  "maxAgeDays": 30,
+  "stale": "exclude"
+}

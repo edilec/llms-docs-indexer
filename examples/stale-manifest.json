@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1",
+  "complete": true,
+  "sources": [
+    {
+      "path": "docs/guide.md",
+      "purpose": "Explain the local example export",
+      "owner": "docs-team",
+      "scope": "Example schema only",
+      "dataClass": "public",
+      "reviewedOn": "2025-12-31"
+    }
+  ]
+}

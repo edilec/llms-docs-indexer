@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1",
+  "complete": true,
+  "sources": [
+    {
+      "path": "docs/guide.md",
+      "purpose": "Explain the local example export",
+      "owner": "docs-team",
+      "scope": "Example schema only",
+      "dataClass": "public",
+      "reviewedOn": "2026-01-01"
+    },
+    {
+      "path": "docs/internal.md",
+      "purpose": "Describe an internal example",
+      "owner": "docs-team",
+      "scope": "Synthetic internal note",
+      "dataClass": "internal",
+      "reviewedOn": "2026-01-01"
+    }
+  ]
+}
